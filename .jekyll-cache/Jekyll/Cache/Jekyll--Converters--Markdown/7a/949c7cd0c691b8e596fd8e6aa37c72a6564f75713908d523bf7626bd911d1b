@@ -1,0 +1,504 @@
+I"��<h2 id="1-introduce"><span style="color:darkblue">1. Introduce</span></h2>
+
+<p><strong>이번 포스팅은 재미로 구축했으니, 너무 많은 돈을 쓰지마세요. 로또는 도박입니다.</strong></p>
+
+<p>저는 돈에 큰 관심이 없습니다. 어렸을 때 가정형편이 매우 어려웠으나, 모든 가족이 다같이 노력했고 상황이 많이 나아졌습니다. 이 과정속에 돈보다는 인류애적 가치를 더 중요하게 생각하는 사람이 됐습니다. 그래도 로또 5000원은 일주일을 두근거리게 하죠.</p>
+
+<p><img src="/assets/img/MATLAB/11_1.png" alt="집게사장과로또" /></p>
+
+<h3 id="11-lotto-in-korea"><span style="color:darkblue">1.1. Lotto in Korea</span></h3>
+
+<p><img src="/assets/img/MATLAB/11_2.png" alt="로또 마크" /></p>
+
+<p>로또는 <code class="language-plaintext highlighter-rouge">1-45</code> 사이에서 <code class="language-plaintext highlighter-rouge">중복없이 6개</code> 의 숫자를 선택합니다. 끝으로 보너스 숫자인 하나를 더 추출합니다. 그렇게 보너스 숫자 포함한 총 <code class="language-plaintext highlighter-rouge">7</code> 개의 숫자맞추기 놀이 입니다. <code class="language-plaintext highlighter-rouge">1000원</code> 당 하나의 티켓을 살 수 있구요. <code class="language-plaintext highlighter-rouge">5000원</code> 으로 한 세트를 살 수 있습니다. 여담으로 저는 로또에 대해서 잘 모릅니다. 이번에 이 코드를 구현하면서 로또룰을 알게 됐고 <strong>앞으로 진행하는 내용은 데이터를 기반으로한 로또 당첨번호 에측입니다.</strong></p>
+
+<h3 id="12-winning-lottery-numbers"><span style="color:darkblue">1.2. Winning lottery numbers</span></h3>
+
+<p><img src="/assets/img/MATLAB/11_3.png" alt="당첨번호들" /></p>
+
+<p>저는 두 가지를 적용할 예정입니다. 첫 번째는 <code class="language-plaintext highlighter-rouge">번호별 통계</code> 를 가져와, 가장 많이 나온 번호 15개중에서 3개, 가장 적게 나온 번호 15개중에서 2개, 중간 번호 15개중에서 1개씩 추출하여 총 6개의 번호를 만들 것이고 두 번째는 <code class="language-plaintext highlighter-rouge">LSTM</code> 을 이용하여 총 45개의 번호들이 추출되는 주기를 뽑아 회차마다 번호를 구할 수 있습니다. 끝으로 이 두가지 구조를 조합해서, <code class="language-plaintext highlighter-rouge">LSTM</code> 으로 구한 번호들중에서 발생빈도에 따라 가중치를 적용하겠습니다.</p>
+
+<h2 id="2-binomial-time-series-lstm"><span style="color:darkblue">2. Binomial time series LSTM</span></h2>
+
+<p><img src="/assets/img/MATLAB/11_4.png" alt="플로우" /></p>
+
+<p>해당 내용은 <code class="language-plaintext highlighter-rouge">RNN</code> 과<code class="language-plaintext highlighter-rouge">LSTM</code> 에 대한 기본적인 이론과 <code class="language-plaintext highlighter-rouge">시계열 분석</code> 에 대한 <code class="language-plaintext highlighter-rouge">LSTM</code>  그리고 <code class="language-plaintext highlighter-rouge">이진 시계열 LSTM</code> 을 순서대로 설명한 다음, <code class="language-plaintext highlighter-rouge">MATLAB</code> 구현 코드로 넘어가겠습니다.</p>
+
+<h3 id="21-recurrent-nerual-network"><span style="color:darkblue">2.1. Recurrent Nerual Network</span></h3>
+
+<p><img src="/assets/img/MATLAB/11_5.png" alt="RNN" /></p>
+
+<p><code class="language-plaintext highlighter-rouge">RNN</code> 이란 <code class="language-plaintext highlighter-rouge">되풀이(Recurrent)</code> 되는 성질을 이용하여, 앞 전에 있는 데이터객체를 일련의 과정에 있다고 받아들이는 모델인데요. 일련의 과정을 설명할 수 있는 <code class="language-plaintext highlighter-rouge">문장, 동영상</code> 이나 <code class="language-plaintext highlighter-rouge">수요예측</code> 에 쓸 수 있습니다. <code class="language-plaintext highlighter-rouge">RNN</code> 은 <code class="language-plaintext highlighter-rouge">CNN</code> 과 다르게 입력, 출력을 자유롭게 구조를 쓸 수 있습니다. 이는 <code class="language-plaintext highlighter-rouge">LSTM</code> 에도 이어집니다.</p>
+
+<p><img src="/assets/img/MATLAB/11_6.png" alt="RNN여러구조" /></p>
+
+<p><code class="language-plaintext highlighter-rouge">one-many</code>는 하나가 들어와 여러 출력을 가지게 합니다. 예를 들면 한 이미지 안에서 여러 객체를 찾을 수 있죠. <code class="language-plaintext highlighter-rouge">many-one</code> 은 여러 출력들 속에서 하나를 반환합니다. 영화 리뷰를 다 읽어와 얼마나 긍정적인 반응인지 알 수 있습니다. 끝으로 <code class="language-plaintext highlighter-rouge">many-many</code> 는 번역이 대표적인 예입니다.</p>
+
+<h3 id="22-long-short-term-memory"><span style="color:darkblue">2.2. Long Short-Term Memory</span></h3>
+
+<p><img src="/assets/img/MATLAB/11_7_1.png" alt="LSTM활성함수" /></p>
+
+<p><img src="/assets/img/MATLAB/11_7_2.png" alt="LSTM활성함수" /></p>
+
+<p><code class="language-plaintext highlighter-rouge">LSTM</code> 은 <code class="language-plaintext highlighter-rouge">RNN(Recurrent Neural Network)</code> 에서 파생된 모델입니다. <code class="language-plaintext highlighter-rouge">MATLAB</code> 에 적혀있는 <code class="language-plaintext highlighter-rouge">활성함수</code> 단을 보겠습니다. 선택할 수 있는게 몇 개 없네요. 순환 신경망 레이어 특성상 <code class="language-plaintext highlighter-rouge">선형 활성함수</code>는 비효율적입니다. 체인룰을 적용했을 때 히든레이어에서 조정할 가중치는 따로 없어지고 계수만 남게되는데요.  아래의 내용은 <a href="https://kr.mathworks.com/help/deeplearning/ref/nnet.cnn.layer.lstmlayer.html#mw_8cad7fee-7610-4134-9354-b7ed3a45204d">MATLAB 도움말</a> 을 그대로 가져왔습니다. 학술적 내용이니 넘어가셔도 됩니다. </p>
+
+<hr />
+
+<p>LSTM 계층은 시계열 및 시퀀스 데이터에서 시간 스텝 간의 장기 종속성을 학습합니다.</p>
+
+<p>계층의 상태는 <strong>은닉 상태</strong>(<strong>출력 상태</strong>)와 <strong>셀 상태</strong>로 구성됩니다. 시간 스텝 t에서의 은닉 상태는 이 시간 스텝에 대한 LSTM 계층의 출력값을 포함합니다. 셀 상태는 이전 시간 스텝에서 학습한 정보를 포함합니다. 이 계층은 각 시간 스텝에서 셀 상태에 정보를 추가하거나 셀 상태로부터 정보를 제거합니다. 계층은 <strong>게이트</strong>를 사용하여 이러한 업데이트를 제어합니다.</p>
+
+<p>다음 구성요소는 계층의 셀 상태와 은닉 상태를 제어합니다.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>구성요소</th>
+      <th>목적</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>입력 게이트(i)</td>
+      <td>셀 상태 업데이트의 수준 제어</td>
+    </tr>
+    <tr>
+      <td>망각 게이트(f)</td>
+      <td>셀 상태 재설정(망각)의 수준 제어</td>
+    </tr>
+    <tr>
+      <td>셀 후보(g)</td>
+      <td>셀 상태에 정보 추가</td>
+    </tr>
+    <tr>
+      <td>출력 게이트(o)</td>
+      <td>은닉 상태에 추가되는 셀 상태의 수준 제어</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><img src="/assets/img/MATLAB/11_8.png" alt="LSTM구조" /></p>
+
+<p>LSTM 계층의 학습 가능한 가중치는 입력 가중치W(<code class="language-plaintext highlighter-rouge">InputWeights</code>), 순환 가중치R(<code class="language-plaintext highlighter-rouge">RecurrentWeights</code>), 편향b(<code class="language-plaintext highlighter-rouge">Bias</code>)입니다. 행렬 W, R, b는 각각 각 구성요소의 입력 가중치 결합, 순환 가중치 결합, 편향 결합입니다. 이러한 행렬은 다음과 같이 결합됩니다.</p>
+
+\[\begin{array}{l}
+W = \begin{bmatrix}W_i\\W_f\\W_g\\W_o\end{bmatrix},
+R = \begin{bmatrix}R_i\\R_f\\R_g\\R_o\end{bmatrix},
+b = \begin{bmatrix}b_i\\b_f\\b_g\\b_o\end{bmatrix}
+\end{array}\]
+
+<p>여기서 i, f, g, o는 입력게이트, 망각게이트, 셀 후보, 출력 게이트를 나타냅니다. 시간 스텝 t에서의 셀 상태는 다음과 같이 표현됩니다.</p>
+
+\[\begin{array}{l}
+c_t = f_t\odot c_{t-1}+i_t\odot g_t
+\end{array}
+
+\\ \odot \text{해당 기호는 요소별 곱셉(component-wise)을 뜻합니다.}\]
+
+<p>시간 스텝 t에서의 은닉 상태는 다음과 같이 표현됩니다.</p>
+
+\[h_t = o_t\odot\sigma_c(c_t)\]
+
+<p>여기서 <em>σ**c</em>는 상태 활성화 함수를 나타냅니다. <code class="language-plaintext highlighter-rouge">lstmLayer</code> 함수는 기본적으로 쌍곡탄젠트 함수(tanh)를 사용하여 상태 활성화 함수를 계산합니다.</p>
+
+<p>다음 수식은 시간 스텝 t에서의 구성요소를 설명합니다.</p>
+
+\[\text{입력 게이트 식 :}\ i_t=\sigma_g(W_ix_t+R_ih_{t-1}+b_i) \\
+\text{망각 게이트 식 :}\ f_t=\sigma_g(W_fx_t+R_fh_{t-1}+b_f) \\
+\text{셀 후보 식 :}\ g_t=\sigma_c(W_gx_t+R_gh_{t-1}+b_g) \\
+\text{출력 게이트 식 :}\ o_t=\sigma_g(W_ox_t+R_oh_{t-1}+b_o) \\
+\text{위 식에서 } \sigma_g \text{는 게이트 활성함수를 나타냅니다. lstm layer 함수는 기본적으로 }\\\sigma(x)=(1+e^{-x})^{-1}\\
+\text{로 표현되는 시그모이드 함수를 사용하여 게이트 활성화 함수를 계산합니다.}\]
+
+<hr />
+
+<p>끝으로 <code class="language-plaintext highlighter-rouge">MATLAB</code> 에서 확인할 수 있는 <code class="language-plaintext highlighter-rouge">LSTM</code> 의 출력 모드는 두 가지가 있습니다. <code class="language-plaintext highlighter-rouge">sequence</code> 와 <code class="language-plaintext highlighter-rouge">last</code> 인데요. <code class="language-plaintext highlighter-rouge">sequence</code> 는 전체 시퀀스를 출력하고, <code class="language-plaintext highlighter-rouge">last</code> 는 <code class="language-plaintext highlighter-rouge">sequence</code> 의 마지막 시간 스텝을 출력한다고 적혀있습니다.</p>
+
+<h3 id="23-time-series-lstm"><span style="color:darkblue">2.3. Time series LSTM</span></h3>
+
+<p>제가 처음으로 사용한 <code class="language-plaintext highlighter-rouge">LSTM</code> 은 영일번역과 다중객체인식으로 사용했습니다. 그러나 이번 포스팅에서 사용할 내용은 <code class="language-plaintext highlighter-rouge">시계열 LSTM</code> 인데요. 작은 차이밖에 없습니다. 분류는 <code class="language-plaintext highlighter-rouge">sequence to label</code> 로 설정하구요. 시계열은 <code class="language-plaintext highlighter-rouge">sequence to sequence</code> 신경망을 이용하여 시계열을 통해 시계열을 얻는 구조로 진행할 예정입니다.</p>
+
+<h3 id="24-binomial-time-series-lstm"><span style="color:darkblue">2.4. Binomial time series LSTM</span></h3>
+
+<p>일반적인 <code class="language-plaintext highlighter-rouge">시계열 예측</code> 은 회귀를 사용합니다. 예를 들면 3년 뒤면 우리 제품의 수요가 어느정도인가? 에 대한 질문에 답을 할 수 있죠. <code class="language-plaintext highlighter-rouge">이진 시계열 예측(Binomial time series)</code> 는 회귀를 <code class="language-plaintext highlighter-rouge">기준(threshold)</code> 치로 두고 <code class="language-plaintext highlighter-rouge">T/F, 맞냐/아니냐</code> 를 얘기합니다. 저희가 곧 구현할 로또당첨번호 예측을 얘기한다면, 1000회차에 17번이 나올 것인가 안 나올 것인가로 얘기하죠.</p>
+
+<h2 id="3-implement"><span style="color:darkblue">3. Implement</span></h2>
+
+<p>본격적으로 구현하는 시간입니다. 프로그램 순서는 역대 당첨번호를 긁어와 이진값으로 바꾸고 <code class="language-plaintext highlighter-rouge">LSTM</code> 을 돌려서 미래의 50회차를 예상하여 후보값들을 가져옵니다. 그 뒤 다시 <code class="language-plaintext highlighter-rouge">로또 당첨 통계</code> 웹 사이트에 접속해서 통계자료를 가져온 다음에 빈도수에 가중치를 두어 추출할 것 입니다.</p>
+
+<div class="language-matlab highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+</pre></td><td class="rouge-code"><pre><span class="nb">clc</span><span class="p">,</span> <span class="nb">clear</span>
+<span class="c1">% 사용할 금액 입력</span>
+<span class="n">Money</span> <span class="o">=</span> <span class="mi">10000</span><span class="p">;</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+<p>초기 셋팅 먼저하고 시작하겠습니다.</p>
+
+<h3 id="31-getting-history"><span style="color:darkblue">3.1. Getting History</span></h3>
+
+<p>역대 당첨번호를 긁어와서 테이블을 만듭니다. <code class="language-plaintext highlighter-rouge">동행복권</code> 사이트에 들어가 소스를 확인해보니 <code class="language-plaintext highlighter-rouge">drwNo</code> 가 회차(1회, 2회, … ,950회 같은)를 담당하는 변수였습니다. <code class="language-plaintext highlighter-rouge">drwNo</code> 를 변경하면 각 회차의 당첨번호를 확인할 수 있습니다. 또한, 언제 끝날지 알기위해서 <code class="language-plaintext highlighter-rouge">waitbar</code> 를 이용하겠습니다.</p>
+
+<p><img src="/assets/img/MATLAB/11_9.png" alt="waitbar" /></p>
+
+<div class="language-matlab highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+</pre></td><td class="rouge-code"><pre><span class="c1">% 역대 당첨번호 긁어오기</span>
+<span class="n">url</span> <span class="o">=</span> <span class="s1">'https://dhlottery.co.kr/gameResult.do?method=byWin'</span><span class="p">;</span>
+<span class="n">data</span> <span class="o">=</span> <span class="nb">webread</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+<span class="c1">% 얼마나 반복할지 구해온다</span>
+<span class="n">startpoint</span> <span class="o">=</span> <span class="nb">strfind</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="s1">'동행복권 '</span><span class="p">);</span>
+<span class="n">endpoint</span> <span class="o">=</span> <span class="nb">strfind</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="s1">'회'</span><span class="p">);</span>
+<span class="n">lim</span> <span class="o">=</span> <span class="nb">str2num</span><span class="p">(</span><span class="n">data</span><span class="p">(</span><span class="n">startpoint</span><span class="o">+</span><span class="mi">5</span><span class="p">:</span><span class="n">endpoint</span><span class="o">-</span><span class="mi">1</span><span class="p">));</span>
+
+<span class="n">header</span> <span class="o">=</span> <span class="p">{</span><span class="s1">'1st'</span><span class="p">,</span> <span class="s1">'2nd'</span><span class="p">,</span> <span class="s1">'3rd'</span><span class="p">,</span> <span class="s1">'4th'</span><span class="p">,</span> <span class="s1">'5th'</span><span class="p">,</span> <span class="s1">'6th'</span><span class="p">,</span> <span class="s1">'Bonus'</span><span class="p">};</span>
+<span class="n">HistorySet</span><span class="p">(</span><span class="mi">1</span><span class="p">:</span><span class="n">lim</span><span class="p">,</span> <span class="mi">1</span><span class="p">:</span><span class="mi">7</span><span class="p">)</span> <span class="o">=</span> <span class="p">{</span><span class="s1">''</span><span class="p">};</span>
+<span class="n">f</span> <span class="o">=</span> <span class="nb">waitbar</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="s1">'Please wait...'</span><span class="p">);</span>
+<span class="c1">% 데이터 가공해서 담기</span>
+<span class="k">for</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">:</span><span class="n">lim</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="nb">webread</span><span class="p">(</span><span class="n">url</span><span class="p">,</span><span class="s1">'drwNo'</span><span class="p">,</span><span class="nb">string</span><span class="p">(</span><span class="n">i</span><span class="p">));</span>
+    <span class="n">startpoint</span> <span class="o">=</span> <span class="nb">strfind</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="s1">'당첨번호 '</span><span class="p">);</span>
+    <span class="n">endpoint</span> <span class="o">=</span> <span class="nb">strfind</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="s1">'1등'</span><span class="p">);</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">(</span><span class="n">startpoint</span><span class="o">+</span><span class="mi">5</span><span class="p">:</span><span class="n">endpoint</span><span class="o">-</span><span class="mi">3</span><span class="p">);</span>
+    <span class="n">numbers</span> <span class="o">=</span> <span class="nb">strsplit</span><span class="p">(</span><span class="n">data</span><span class="p">,</span><span class="s1">','</span><span class="p">);</span>
+    <span class="n">bonus</span> <span class="o">=</span> <span class="nb">strsplit</span><span class="p">(</span><span class="n">numbers</span><span class="p">{</span><span class="mi">6</span><span class="p">},</span><span class="s1">'+'</span><span class="p">);</span>
+    <span class="n">HistorySet</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="p">:)</span> <span class="o">=</span> <span class="p">[</span><span class="n">numbers</span><span class="p">(</span><span class="mi">1</span><span class="p">:</span><span class="mi">5</span><span class="p">)</span> <span class="n">bonus</span><span class="p">];</span>
+    <span class="nb">waitbar</span><span class="p">(</span><span class="n">i</span><span class="p">/</span><span class="n">lim</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="nb">strcat</span><span class="p">(</span><span class="nb">string</span><span class="p">(</span><span class="n">i</span><span class="p">),</span> <span class="s1">'회차 완료'</span><span class="p">));</span>
+<span class="k">end</span>
+<span class="nb">delete</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+
+<span class="n">HistorySet</span> <span class="o">=</span> <span class="nb">cell2table</span><span class="p">(</span><span class="n">HistorySet</span><span class="p">,</span> <span class="s2">"VariableNames"</span><span class="p">,</span> <span class="n">header</span><span class="p">);</span>
+<span class="nb">writetable</span><span class="p">(</span><span class="n">HistorySet</span><span class="p">,</span> <span class="s1">'temp.csv'</span><span class="p">)</span>
+<span class="n">HistorySet</span> <span class="o">=</span> <span class="nb">readtable</span><span class="p">(</span><span class="s1">'temp.csv'</span><span class="p">,</span><span class="s2">"VariableNamingRule"</span><span class="p">,</span><span class="s2">"preserve"</span><span class="p">);</span>
+<span class="nb">delete</span><span class="p">(</span><span class="s1">'temp.csv'</span><span class="p">)</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+<h3 id="32-convert-type-to-binomial"><span style="color:darkblue">3.2. Convert type to binomial</span></h3>
+
+<p><code class="language-plaintext highlighter-rouge">HistorySet</code> 에 들어가있는 테이블 형태는 아래와 같습니다. 이를 <code class="language-plaintext highlighter-rouge">Binomial</code> 형태로 바꾸면 <code class="language-plaintext highlighter-rouge">45짜리 행벡터</code> 에 해당하는 숫자가 1로 들어갑니다.</p>
+
+<p><img src="/assets/img/MATLAB/11_10.png" alt="historyset" /></p>
+
+<div class="language-matlab highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+</pre></td><td class="rouge-code"><pre><span class="c1">%dummy val 형태로 변환</span>
+<span class="n">f</span> <span class="o">=</span> <span class="nb">waitbar</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="s1">'Please wait...'</span><span class="p">);</span>
+<span class="n">Dummy</span> <span class="o">=</span> <span class="nb">zeros</span><span class="p">(</span><span class="n">lim</span><span class="p">,</span> <span class="mi">45</span><span class="p">);</span>
+<span class="k">for</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">:</span><span class="n">lim</span>
+    <span class="n">Dummy</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">HistorySet</span><span class="p">{</span><span class="n">i</span><span class="p">,</span> <span class="p">:})</span> <span class="o">=</span> <span class="mi">1</span><span class="p">;</span>
+    <span class="nb">waitbar</span><span class="p">(</span><span class="n">i</span><span class="p">/</span><span class="n">lim</span><span class="p">,</span> <span class="n">f</span><span class="p">,</span> <span class="s1">'processing'</span><span class="p">);</span>
+<span class="k">end</span>
+<span class="nb">delete</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+<p><img src="/assets/img/MATLAB/11_11.png" alt="dummy" /></p>
+
+<p>이렇게 말이죠.</p>
+
+<h3 id="33-learning-lottos-pattern"><span style="color:darkblue">3.3. Learning lotto’s pattern</span></h3>
+
+<p><code class="language-plaintext highlighter-rouge">LSTM</code> 을 이용해서 역대 당첨번호들을 학습시킵시다.</p>
+
+<div class="language-matlab highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+</pre></td><td class="rouge-code"><pre><span class="c1">%LSTM 학습</span>
+<span class="c1">%numTimeStepsTrain = floor(0.9*length(Dummy));</span>
+
+<span class="c1">%dataTrain = Dummy(1:numTimeStepsTrain+1, :);</span>
+<span class="c1">%dataTest = Dummy(numTimeStepsTrain+1:end, :);</span>
+
+<span class="n">dataTrain</span> <span class="o">=</span> <span class="n">Dummy</span><span class="p">;</span>
+
+<span class="n">XTrain</span> <span class="o">=</span> <span class="n">dataTrain</span><span class="p">(</span><span class="mi">1</span><span class="p">:</span><span class="k">end</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">:);</span>
+<span class="n">YTrain</span> <span class="o">=</span> <span class="n">dataTrain</span><span class="p">(</span><span class="mi">2</span><span class="p">:</span><span class="k">end</span><span class="p">,</span> <span class="p">:);</span>
+
+<span class="n">numFeatures</span> <span class="o">=</span> <span class="mi">45</span><span class="p">;</span>
+<span class="n">numResponses</span> <span class="o">=</span> <span class="mi">45</span><span class="p">;</span>
+<span class="n">numHiddenUnits</span> <span class="o">=</span> <span class="mi">200</span><span class="p">;</span>
+
+<span class="n">layers</span> <span class="o">=</span> <span class="p">[</span> <span class="k">...</span>
+    <span class="n">sequenceInputLayer</span><span class="p">(</span><span class="n">numFeatures</span><span class="p">)</span>
+    <span class="n">lstmLayer</span><span class="p">(</span><span class="n">numHiddenUnits</span><span class="p">)</span>
+    <span class="n">fullyConnectedLayer</span><span class="p">(</span><span class="n">numResponses</span><span class="p">)</span>
+    <span class="n">regressionLayer</span><span class="p">];</span>
+
+<span class="n">options</span> <span class="o">=</span> <span class="n">trainingOptions</span><span class="p">(</span><span class="s1">'adam'</span><span class="p">,</span> <span class="k">...</span>
+    <span class="s1">'MaxEpochs'</span><span class="p">,</span><span class="mi">250</span><span class="p">,</span> <span class="k">...</span>
+    <span class="s1">'GradientThreshold'</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span> <span class="k">...</span>
+    <span class="s1">'InitialLearnRate'</span><span class="p">,</span><span class="mf">0.005</span><span class="p">,</span> <span class="k">...</span>
+    <span class="s1">'LearnRateSchedule'</span><span class="p">,</span><span class="s1">'piecewise'</span><span class="p">,</span> <span class="k">...</span>
+    <span class="s1">'LearnRateDropPeriod'</span><span class="p">,</span><span class="mi">125</span><span class="p">,</span> <span class="k">...</span>
+    <span class="s1">'LearnRateDropFactor'</span><span class="p">,</span><span class="mf">0.2</span><span class="p">,</span> <span class="k">...</span>
+    <span class="s1">'Verbose'</span><span class="p">,</span><span class="mi">0</span><span class="p">,</span> <span class="k">...</span>
+    <span class="s1">'Plots'</span><span class="p">,</span><span class="s1">'training-progress'</span><span class="p">);</span>
+
+<span class="n">net</span> <span class="o">=</span> <span class="n">trainNetwork</span><span class="p">(</span><span class="n">XTrain</span><span class="s1">',YTrain'</span><span class="p">,</span><span class="n">layers</span><span class="p">,</span><span class="n">options</span><span class="p">);</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+<p><code class="language-plaintext highlighter-rouge">Lotto</code> 는 <code class="language-plaintext highlighter-rouge">Uniform</code> 분포에서 랜덤추출되는 메커니즘이기에 아무래도 좋은 <code class="language-plaintext highlighter-rouge">RMSE</code> 라고할 순 없네요.</p>
+
+<p><img src="/assets/img/MATLAB/11_12.png" alt="result" /></p>
+
+<h3 id="34-prediction"><span style="color:darkblue">3.4. Prediction</span></h3>
+
+<p>미래 50회차를 예상해봅니다</p>
+
+<div class="language-matlab highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+</pre></td><td class="rouge-code"><pre><span class="c1">%LSTM 미래스텝</span>
+<span class="n">net</span> <span class="o">=</span> <span class="n">predictAndUpdateState</span><span class="p">(</span><span class="n">net</span><span class="p">,</span><span class="n">XTrain</span><span class="o">'</span><span class="p">);</span>
+<span class="p">[</span><span class="n">net</span><span class="p">,</span><span class="n">YPred</span><span class="p">]</span> <span class="o">=</span> <span class="n">predictAndUpdateState</span><span class="p">(</span><span class="n">net</span><span class="p">,</span><span class="n">YTrain</span><span class="p">(</span><span class="k">end</span><span class="p">,</span> <span class="p">:)</span><span class="o">'</span><span class="p">);</span>
+
+<span class="n">numTimeStepsTest</span> <span class="o">=</span> <span class="mi">50</span><span class="p">;</span>
+<span class="k">for</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">2</span><span class="p">:</span><span class="n">numTimeStepsTest</span>
+    <span class="p">[</span><span class="n">net</span><span class="p">,</span><span class="n">YPred</span><span class="p">(:,</span><span class="n">i</span><span class="p">)]</span> <span class="o">=</span> <span class="n">predictAndUpdateState</span><span class="p">(</span><span class="n">net</span><span class="p">,</span><span class="n">YPred</span><span class="p">(:,</span><span class="n">i</span><span class="o">-</span><span class="mi">1</span><span class="p">),</span><span class="s1">'ExecutionEnvironment'</span><span class="p">,</span><span class="s1">'cpu'</span><span class="p">);</span>
+<span class="k">end</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+<p>해당 값에서 0.29보다 높은 애들만 추려서 <code class="language-plaintext highlighter-rouge">Binomial</code> 형태로 변환합니다.</p>
+
+<div class="language-matlab highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+</pre></td><td class="rouge-code"><pre><span class="c1">% dummy val 형태로 변환</span>
+<span class="n">temp</span> <span class="o">=</span> <span class="n">YPred</span> <span class="o">&gt;</span> <span class="mf">0.29</span><span class="p">;</span>
+<span class="c1">% 번호로 돌려놓기</span>
+<span class="k">for</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">1</span><span class="p">:</span><span class="n">numTimeStepsTest</span>
+    <span class="n">Candidate</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">=</span> <span class="p">{</span><span class="nb">find</span><span class="p">(</span><span class="n">temp</span><span class="p">(:,</span> <span class="n">i</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)};</span>
+<span class="k">end</span>
+<span class="n">Dummy</span><span class="p">(</span><span class="k">end</span><span class="o">+</span><span class="mi">1</span><span class="p">:</span><span class="k">end</span><span class="o">+</span><span class="n">numTimeStepsTest</span><span class="p">,</span> <span class="p">:)</span> <span class="o">=</span> <span class="n">temp</span><span class="o">'</span><span class="p">;</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+<p>이렇게 말이죠.</p>
+
+<p><img src="/assets/img/MATLAB/11_13.png" alt="data" /></p>
+
+<h3 id="35-getting-statistical-data"><span style="color:darkblue">3.5. Getting statistical data</span></h3>
+
+<div class="language-matlab highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+</pre></td><td class="rouge-code"><pre><span class="c1">% 통계자료 획득</span>
+<span class="n">url</span> <span class="o">=</span> <span class="s1">'https://dhlottery.co.kr/gameResult.do?method=statByNumber'</span><span class="p">;</span>
+<span class="n">data</span> <span class="o">=</span> <span class="nb">webread</span><span class="p">(</span><span class="n">url</span><span class="p">);</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+<p>웹에 들어가서 역대 통계자료를 가져옵니다.</p>
+
+<div class="language-matlab highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+</pre></td><td class="rouge-code"><pre><span class="c1">% 데이터 파싱</span>
+<span class="n">be</span> <span class="o">=</span> <span class="nb">strfind</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="s1">'ballNoPop[0] ='</span><span class="p">);</span>
+<span class="n">ed</span> <span class="o">=</span> <span class="nb">strfind</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="s1">'drwtNoPop[44] ='</span><span class="p">);</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="p">(</span><span class="n">be</span><span class="p">:</span><span class="n">ed</span><span class="o">+</span><span class="mi">21</span><span class="p">);</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+<p>1~45의 발생빈도를 가져와야되니까 해당 구간만 가져오구요.</p>
+
+<div class="language-matlab highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+</pre></td><td class="rouge-code"><pre><span class="c1">% 숫자데이터 추출</span>
+<span class="n">tempData</span> <span class="o">=</span> <span class="nb">split</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="s1">';'</span><span class="p">);</span>
+<span class="n">tempData</span><span class="p">(</span><span class="k">end</span><span class="p">)</span> <span class="o">=</span> <span class="p">[];</span>
+<span class="n">numData</span> <span class="o">=</span> <span class="nb">split</span><span class="p">(</span><span class="n">tempData</span><span class="p">,</span> <span class="s1">'='</span><span class="p">);</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+<p>숫자를 빼내옵니다.</p>
+
+<div class="language-matlab highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+</pre></td><td class="rouge-code"><pre><span class="c1">% 계산가능한 형태로 변환</span>
+<span class="n">Lotto</span><span class="o">.</span><span class="n">Pop</span> <span class="o">=</span> <span class="n">numData</span><span class="p">(</span><span class="mi">2</span><span class="p">:</span><span class="mi">2</span><span class="p">:</span><span class="k">end</span><span class="p">,</span> <span class="mi">2</span><span class="p">);</span>
+<span class="k">for</span> <span class="n">i</span><span class="o">=</span><span class="mi">1</span><span class="p">:</span><span class="nb">length</span><span class="p">(</span><span class="n">Lotto</span><span class="o">.</span><span class="n">Pop</span><span class="p">)</span>
+    <span class="n">Lotto</span><span class="o">.</span><span class="n">Pop</span><span class="p">(</span><span class="n">i</span><span class="p">)</span> <span class="o">=</span> <span class="nb">extractBetween</span><span class="p">(</span><span class="n">Lotto</span><span class="o">.</span><span class="n">Pop</span><span class="p">{</span><span class="n">i</span><span class="p">},</span><span class="s2">"'"</span><span class="p">,</span><span class="s2">"'"</span><span class="p">,</span><span class="s2">"Boundaries"</span><span class="p">,</span><span class="s2">"exclusive"</span><span class="p">);</span>
+<span class="k">end</span>
+<span class="n">Lotto</span><span class="o">.</span><span class="n">Pop</span> <span class="o">=</span> <span class="nb">str2num</span><span class="p">(</span><span class="nb">cell2mat</span><span class="p">(</span><span class="n">Lotto</span><span class="o">.</span><span class="n">Pop</span><span class="p">));</span>
+
+<span class="nb">rng</span><span class="p">(</span><span class="s1">'shuffle'</span><span class="p">);</span>
+<span class="c1">% 발생빈도 내림차순 정렬</span>
+<span class="p">[</span><span class="n">Lotto</span><span class="o">.</span><span class="n">Pop</span><span class="p">,</span> <span class="n">Lotto</span><span class="o">.</span><span class="n">Num</span><span class="p">]</span> <span class="o">=</span> <span class="nb">sort</span><span class="p">(</span><span class="n">Lotto</span><span class="o">.</span><span class="n">Pop</span><span class="p">,</span> <span class="s1">'descend'</span><span class="p">);</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+<p>계산을 해야되니까 숫자형태로 바꾸고 내림차순으로 정렬했습니다.</p>
+
+<h3 id="36-predict-lucky-number"><span style="color:darkblue">3.6. Predict lucky number</span></h3>
+
+<p>번호추출은 <code class="language-plaintext highlighter-rouge">LSTM</code> 에서 가져온 번호와 가장 높은 빈도 15개의 교집합으로 얻은 숫자 3개, 중간 빈도 15개의 교집합으로 얻은 숫자 1개, 낮은 빈도 15개의 교집합으로 얻은 숫자 2개를 랜덤 생성하여 총 6개의 숫자를 얻습니다.</p>
+
+<div class="language-matlab highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+</pre></td><td class="rouge-code"><pre><span class="c1">% 번호추출</span>
+<span class="k">for</span> <span class="n">itr</span><span class="o">=</span><span class="mi">1</span><span class="p">:</span><span class="n">numTimeStepsTest</span>
+    <span class="n">Term</span> <span class="o">=</span> <span class="n">lim</span> <span class="o">+</span> <span class="n">itr</span><span class="p">;</span>
+    <span class="k">for</span> <span class="n">i</span><span class="o">=</span><span class="mi">1</span><span class="p">:</span><span class="n">Money</span><span class="p">/</span><span class="mi">1000</span>
+        <span class="nb">clearvars</span> <span class="n">Predicted</span> <span class="n">A</span> <span class="n">B</span> <span class="n">C</span>
+        <span class="n">A</span><span class="o">=</span><span class="mi">3</span><span class="p">;</span><span class="n">B</span><span class="o">=</span><span class="mi">1</span><span class="p">;</span><span class="n">C</span><span class="o">=</span><span class="mi">2</span><span class="p">;</span>
+        <span class="n">N</span> <span class="o">=</span> <span class="nb">intersect</span><span class="p">(</span><span class="n">Candidate</span><span class="p">{</span><span class="n">itr</span><span class="p">},</span><span class="n">Lotto</span><span class="o">.</span><span class="n">Num</span><span class="p">(</span><span class="mi">1</span><span class="p">:</span><span class="mi">15</span><span class="p">));</span>
+        <span class="k">if</span> <span class="nb">length</span><span class="p">(</span><span class="n">N</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">A</span>
+            <span class="n">A</span> <span class="o">=</span> <span class="nb">length</span><span class="p">(</span><span class="n">N</span><span class="p">);</span>
+        <span class="k">end</span>
+        <span class="k">if</span> <span class="n">A</span> <span class="o">~=</span> <span class="mi">0</span>
+            <span class="n">Predicted</span><span class="p">(</span><span class="mi">1</span><span class="p">:</span><span class="n">A</span><span class="p">)</span> <span class="o">=</span> <span class="n">datasample</span><span class="p">(</span><span class="n">N</span><span class="p">,</span><span class="n">A</span><span class="p">,</span><span class="s1">'Replace'</span><span class="p">,</span><span class="nb">false</span><span class="p">);</span>
+        <span class="k">end</span>
+        
+        <span class="n">N</span> <span class="o">=</span> <span class="nb">intersect</span><span class="p">(</span><span class="n">Candidate</span><span class="p">{</span><span class="n">itr</span><span class="p">},</span><span class="n">Lotto</span><span class="o">.</span><span class="n">Num</span><span class="p">(</span><span class="mi">16</span><span class="p">:</span><span class="mi">30</span><span class="p">));</span>
+        <span class="k">if</span> <span class="nb">length</span><span class="p">(</span><span class="n">N</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">B</span>
+            <span class="n">B</span> <span class="o">=</span> <span class="nb">length</span><span class="p">(</span><span class="n">N</span><span class="p">);</span>
+        <span class="k">end</span>
+        <span class="k">if</span> <span class="n">B</span> <span class="o">~=</span> <span class="mi">0</span>
+            <span class="n">Predicted</span><span class="p">(</span><span class="n">A</span><span class="o">+</span><span class="mi">1</span><span class="p">:</span><span class="n">A</span><span class="o">+</span><span class="n">B</span><span class="p">)</span> <span class="o">=</span> <span class="n">datasample</span><span class="p">(</span><span class="n">N</span><span class="p">,</span><span class="n">B</span><span class="p">,</span><span class="s1">'Replace'</span><span class="p">,</span><span class="nb">false</span><span class="p">);</span>
+        <span class="k">end</span>
+        
+        <span class="n">N</span> <span class="o">=</span> <span class="nb">intersect</span><span class="p">(</span><span class="n">Candidate</span><span class="p">{</span><span class="n">itr</span><span class="p">},</span><span class="n">Lotto</span><span class="o">.</span><span class="n">Num</span><span class="p">(</span><span class="mi">31</span><span class="p">:</span><span class="mi">45</span><span class="p">));</span>
+        <span class="k">if</span> <span class="nb">length</span><span class="p">(</span><span class="n">N</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">C</span>
+            <span class="n">C</span> <span class="o">=</span> <span class="nb">length</span><span class="p">(</span><span class="n">N</span><span class="p">);</span>
+        <span class="k">end</span>
+        <span class="k">if</span> <span class="n">C</span> <span class="o">~=</span> <span class="mi">0</span>
+            <span class="n">Predicted</span><span class="p">(</span><span class="n">A</span><span class="o">+</span><span class="n">B</span><span class="o">+</span><span class="mi">1</span><span class="p">:</span><span class="n">A</span><span class="o">+</span><span class="n">B</span><span class="o">+</span><span class="n">C</span><span class="p">)</span> <span class="o">=</span> <span class="n">datasample</span><span class="p">(</span><span class="n">N</span><span class="p">,</span><span class="n">C</span><span class="p">,</span><span class="s1">'Replace'</span><span class="p">,</span><span class="nb">false</span><span class="p">);</span>
+        <span class="k">end</span>
+        
+        <span class="k">if</span> <span class="n">A</span><span class="o">+</span><span class="n">B</span><span class="o">+</span><span class="n">C</span> <span class="o">&lt;</span> <span class="mi">6</span>
+            <span class="n">N</span> <span class="o">=</span> <span class="n">Lotto</span><span class="o">.</span><span class="n">Num</span><span class="p">(</span><span class="mi">1</span><span class="p">:</span><span class="mi">15</span><span class="p">);</span>
+            <span class="n">Predicted</span><span class="p">(</span><span class="n">A</span><span class="o">+</span><span class="n">B</span><span class="o">+</span><span class="n">C</span><span class="o">+</span><span class="mi">1</span><span class="p">:</span><span class="mi">6</span><span class="p">)</span> <span class="o">=</span> <span class="n">datasample</span><span class="p">(</span><span class="n">N</span><span class="p">,</span><span class="mi">6</span><span class="o">-</span><span class="p">(</span><span class="n">A</span><span class="o">+</span><span class="n">B</span><span class="o">+</span><span class="n">C</span><span class="p">),</span><span class="s1">'Replace'</span><span class="p">,</span><span class="nb">false</span><span class="p">);</span>
+        <span class="k">end</span>
+        <span class="n">Result</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="p">:)</span> <span class="o">=</span> <span class="p">[</span><span class="nb">sort</span><span class="p">(</span><span class="n">Predicted</span><span class="p">)</span> <span class="n">Term</span><span class="p">];</span>
+    <span class="k">end</span>
+    <span class="n">PredictSet</span><span class="p">((</span><span class="n">itr</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">Money</span><span class="p">/</span><span class="mi">1000</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">:(</span><span class="n">itr</span><span class="p">)</span><span class="o">*</span><span class="p">(</span><span class="n">Money</span><span class="p">/</span><span class="mi">1000</span><span class="p">),</span> <span class="p">:)</span> <span class="o">=</span> <span class="n">Result</span><span class="p">;</span>
+<span class="k">end</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+<h3 id="37-saving-numbers"><span style="color:darkblue">3.7. Saving numbers</span></h3>
+
+<p>끝으로 만들어진 데이터를 2차 가공할 수도 있으니, <code class="language-plaintext highlighter-rouge">.csv</code> 로 저장합니다.</p>
+
+<div class="language-matlab highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+</pre></td><td class="rouge-code"><pre><span class="n">header</span><span class="p">{</span><span class="k">end</span><span class="p">}</span> <span class="o">=</span> <span class="s1">'Round'</span><span class="p">;</span>
+<span class="n">T</span> <span class="o">=</span> <span class="nb">array2table</span><span class="p">(</span><span class="n">PredictSet</span><span class="p">,</span><span class="s2">"VariableNames"</span><span class="p">,</span><span class="n">header</span><span class="p">);</span>
+<span class="nb">writetable</span><span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="s1">'BlessYou.csv'</span><span class="p">)</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+<p>행운을 빌겠습니다</p>
+:ET
