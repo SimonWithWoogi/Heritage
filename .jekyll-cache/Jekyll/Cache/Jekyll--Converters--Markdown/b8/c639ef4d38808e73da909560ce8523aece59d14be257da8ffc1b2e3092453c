@@ -1,4 +1,4 @@
-I"(W<p><strong>해당 포스팅은 Saad, Abdelrahman I 저자의 “Opinion Mining on US Airline Twitter Data Using Machine Learning Techniques”라는 논문을 해석한 글이며, 해당 논문은 IEEE(ICENCO) Vol. 20, pp. 59-63, Dec 2020에 올라와 있습니다.</strong></p>
+I"4W<p><strong>해당 포스팅은 Saad, Abdelrahman I 저자의 “Opinion Mining on US Airline Twitter Data Using Machine Learning Techniques”라는 논문을 해석한 글이며, 해당 논문은 IEEE(ICENCO) Vol. 20, pp. 59-63, Dec 2020에 올라와 있습니다.</strong></p>
 
 <p>해당 논문의 Subject Terms는 아래와 같습니다.</p>
 
@@ -149,9 +149,11 @@
 
 <h2 id="5-experiment-results--discussion"><span style="color:darkblue">5. EXPERIMENT RESULTS &amp; DISCUSSION</span></h2>
 
-<p>우리는 다른 머신러닝 기법을 이용하여 6가지의 결과를 얻었습니다. 주 목적은 세개(긍정, 부정, 중립)의 감성으로 분류하는 것이었는데, 이는 SVM과 LR이 85.59%와 81.81%로 가장 높은 정확도를 가졌습니다. RF,XGB,NB,DT는 각각 78.55%, 73%, 70.51%입니다. SVM은 87.2%, 94.4%, 89.53%의 정확도를 가지고 프리시전은 84%, 94%, 88% 였습니다. 리콜은 98%, 69%, 63%였씁니다. F1score는 90%, 79%, 73% 였습니다. LR은 85.04%, 92.76%, 85.82%였으며 <중략> **Fig.2, 표2-4로 대체합니다.**</중략></p>
+<p>우리는 다른 머신러닝 기법을 이용하여 6가지의 결과를 얻었습니다. 주 목적은 세개(긍정, 부정, 중립)의 감성으로 분류하는 것이었는데, 이는 SVM과 LR이 85.59%와 81.81%로 가장 높은 정확도를 가졌습니다. RF,XGB,NB,DT는 각각 78.55%, 73%, 70.51%입니다. SVM은 87.2%, 94.4%, 89.53%의 정확도를 가지고 프리시전은 84%, 94%, 88% 였습니다. 리콜은 98%, 69%, 63%였습니다. F1score는 90%, 79%, 73% 였습니다. LR은 85.04%, 92.76%, 85.82%였으며 -중략-</p>
 
-<p><img src="/assets/img/trans/1_2.png" alt="Fig1" /></p>
+<p><strong>Fig.2, 표2-4로 대체합니다.</strong></p>
+
+<p><img src="/assets/img/trans/1_2.png" alt="Fig2" /></p>
 
 <h2 id="6-conclusion"><span style="color:darkblue">6. CONCLUSION</span></h2>
 

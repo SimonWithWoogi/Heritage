@@ -3,7 +3,7 @@ title: 논문해석, 머신러닝 기술을 활용한 US Airline twitter data �
 author: Simon Anderson
 date: 2021-03-30 19:00:00 +0800
 categories: [Language, Engineering]
-tags: [BigData, Data Mining, AI, MachineLearning, Statistics, writing]
+tags: [BigData, DataMining, AI, MachineLearning, Statistics, writing]
 image: /assets/img/CI/IEEE.jpg
 math: true
 ---
