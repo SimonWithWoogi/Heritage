@@ -1,0 +1,49 @@
+I"Z<h2 id="string-을-lpcwstr-로-변환"><span style="color:darkblue">string 을 LPCWSTR 로 변환</span></h2>
+
+<p><span style="color:darkblue"><code class="language-plaintext highlighter-rouge">1.1. 기초설명</code></span></p>
+
+<p>C++ 에서는 문자열에 관한 처리가 엄격한 편이라 같은 문자열이라도 char[] ,char<em>,const char[],const char</em>,string,wstring,CString,LPCWSTR,LPCSTR</p>
+
+<p>등등 .. 여러가지가 있는데 유니코드와 멀티바이트 문자열의 차이나 .. 16비트 32비트 차이 등등 .. 대표적이 차이가 있겠네요 ..</p>
+
+<p>하지만 차이가 있다는거만 알면 되는거 아니겠습니까 저는 일단 LPCWSTR을 써야 하니 변환법을 알아보겠습니다.</p>
+
+<p><span style="color:darkblue"><code class="language-plaintext highlighter-rouge">1.1. Code</code></span></p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><table class="rouge-table"><tbody><tr><!-- <td class="rouge-gutter gl"><pre class="lineno">1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+</pre></td> --><td class="rouge-code"><pre><span class="n">std</span><span class="o">::</span><span class="n">wstring</span> <span class="nf">s2ws</span><span class="p">(</span><span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="o">&amp;</span> <span class="n">s</span><span class="p">)</span>
+<span class="p">{</span>
+	<span class="kt">int</span> <span class="n">len</span><span class="p">;</span>
+	<span class="kt">int</span> <span class="n">slength</span> <span class="o">=</span> <span class="p">(</span><span class="kt">int</span><span class="p">)</span><span class="n">s</span><span class="p">.</span><span class="n">length</span><span class="p">()</span> <span class="o">+</span> <span class="mi">1</span><span class="p">;</span>
+	<span class="n">len</span> <span class="o">=</span> <span class="n">MultiByteToWideChar</span><span class="p">(</span><span class="n">CP_ACP</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">s</span><span class="p">.</span><span class="n">c_str</span><span class="p">(),</span> <span class="n">slength</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">);</span>
+	<span class="kt">wchar_t</span><span class="o">*</span> <span class="n">buf</span> <span class="o">=</span> <span class="k">new</span> <span class="kt">wchar_t</span><span class="p">[</span><span class="n">len</span><span class="p">];</span>
+	<span class="n">MultiByteToWideChar</span><span class="p">(</span><span class="n">CP_ACP</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">s</span><span class="p">.</span><span class="n">c_str</span><span class="p">(),</span> <span class="n">slength</span><span class="p">,</span> <span class="n">buf</span><span class="p">,</span> <span class="n">len</span><span class="p">);</span>
+	<span class="n">std</span><span class="o">::</span><span class="n">wstring</span> <span class="n">r</span><span class="p">(</span><span class="n">buf</span><span class="p">);</span>
+	<span class="k">delete</span><span class="p">[]</span> <span class="n">buf</span><span class="p">;</span>
+	<span class="k">return</span> <span class="n">r</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="kt">int</span> <span class="nf">main</span><span class="p">()</span>
+<span class="p">{</span>
+    <span class="n">std</span><span class="o">::</span><span class="n">wstring</span> <span class="n">stemp</span> <span class="o">=</span> <span class="n">s2ws</span><span class="p">(</span><span class="s">"TEST_str"</span><span class="p">);</span>
+	<span class="n">LPCWSTR</span> <span class="n">result</span> <span class="o">=</span> <span class="n">stemp</span><span class="p">.</span><span class="n">c_str</span><span class="p">();</span>
+<span class="p">}</span>
+</pre></td></tr></tbody></table></code></pre></div></div>
+
+<p>요렇게 하면 C++ 의 기본 제공 레퍼런스인 string 형을 LPCWSTR로 변환이 됩니다 !</p>
+
+:ET
